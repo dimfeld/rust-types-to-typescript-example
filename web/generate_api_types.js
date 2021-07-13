@@ -9,35 +9,13 @@ async function main() {
   let schemasPath = path.join(dirname, '..', 'schemas');
   let schemaFiles = (await fs.readdir(schemasPath)).filter((x) => x.endsWith('.json'));
 
-  let schemas = new Map();
-
-  function addType(name, definition) {
-    if (!schemas.has(name)) {
-      schemas.set(name, definition);
-    }
-  }
-
-  for (let filename of schemaFiles) {
-    let filePath = path.join(schemasPath, filename);
-    let schema = JSON.parse(await fs.readFile(filePath));
-
-    let { definitions, ...schemaWithoutDefinitions } = schema;
-    addType(schema.title, schemaWithoutDefinitions);
-    for (let [key, val] of Object.entries(definitions || {})) {
-      addType(key, { $schema: schema.$schema, title: key, ...val });
-    }
-  }
-
-  let definitions = {};
-  for (let [key, val] of schemas.entries()) {
-    definitions[key] = val;
-  }
-
   // Compile all types, stripping out duplicates. This is a bit dumb but the easiest way to
   // do it since we can't suppress generation of definition references.
   let compiledTypes = new Set();
-  for (let [key, val] of schemas.entries()) {
-    let compiled = await compile({ ...val, definitions }, key, { bannerComment: '' });
+  for (let filename of schemaFiles) {
+    let filePath = path.join(schemasPath, filename);
+    let schema = JSON.parse(await fs.readFile(filePath));
+    let compiled = await compile(schema, schema.title, { bannerComment: '' });
 
     let eachType = compiled.split('export');
     for (let type of eachType) {
